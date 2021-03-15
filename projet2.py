@@ -9,7 +9,7 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
-def infobook(product_page_url):
+def info_book(product_page_url):
     """ Récupère les informations d'un livre depuis l'url du livre
         La fonction renvoie les informations sous forme de dictionnaire
         les 10 clefs qui composent ce dictionnaire :
@@ -87,14 +87,15 @@ def writecsvcategory(datarray):
 def infobookbycategory(category_page_url):
     """ La fonction récupère les urls des livres d'une catégorie
         avec la fonction urlbookbycategory().
-        Avec les "URLs Livre" la fonction infobook() obtient les informations demandées
+        Avec les "URLs Livre" la fonction info_book() obtient les informations demandées
         pour chaque livre puis on enregistre les données de la catégorie en
         format csv avec la fonction writecsvcategory """
     databook = []
     urlsbook = urlbookbycategory(category_page_url)
     for urlbook in urlsbook:
-        databook.append(infobook(urlbook))
+        databook.append(info_book(urlbook))
     writecsvcategory(databook)
+    saveimagebook(databook)
 
 def urlbookbycategory(category_page_url):
     """ Cette fonction renvoie les urls des livres pour une catégorie
@@ -135,7 +136,7 @@ def pagebycategory(category_page_url):
     listpagebycategory.append(category_page_url)
     if pagin:
         pages = int(pagin.text.strip().split(' ')[3])-1
-        category_url=category_page_url.replace('index.html', '')
+        category_url = category_page_url.replace('index.html', '')
         for i in range(pages):
             listpagebycategory.append(category_url+'page-'+str(i+2)+'.html')
         return listpagebycategory
@@ -151,8 +152,22 @@ def listcategory(url):
     category_urls = soup.find('ul', {'class': 'nav nav-list'}).findAll('li')
     del category_urls[0]
     for category in category_urls:
-        category_url=url+category.find('a')['href']
+        category_url = url+category.find('a')['href']
         infobookbycategory(category_url)
+
+def saveimagebook(datarray):
+    """ La fonction créée le répertoire de destination si absent
+        Récupère et copie les images dans le réprtoire de destination
+        repdata+/<category>/<image>
+    """
+    repbase = '/tmp/data/img/'
+    repdata = repbase+datarray[0]['category']
+    if not os.path.exists(repdata):
+        os.makedirs(repdata)
+    for data in datarray:
+        if data['image_url'].find('/'):
+            req = requests.get(data['image_url'], allow_redirects=True)
+            open(repdata+'/'+data['image_url'].rsplit('/', 1)[1], 'wb').write(req.content)
 
 if __name__ == '__main__':
     listcategory(url='http://books.toscrape.com/')
